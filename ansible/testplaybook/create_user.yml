@@ -1,0 +1,35 @@
+---
+- hosts: all
+  remote_user: vagrant
+
+  tasks:
+    - name: hi
+      ping:
+      remote_user: vagrant
+
+    - name: Add ansible user
+      user:
+        name: ansible
+        shell: /bin/bash
+        # 'testing'
+        password: $6$xbEkDI2zpxYoG6cN$o9Z9W4xPgt01X2BZvM4Ml4luaG2bAlfdX7HS8quclsD9MFvJYZiZOjwDKYsJfN2OPCKnZD653vsCP881SzM/b1
+        state: present
+        groups: sudo 
+        append: yes
+      become: true
+      when: ansible_distribution == 'Ubuntu' or ansible_distribution == 'Debian'
+      #register: user_added
+
+    #- debug:
+    #    msg: "user_added is {{ user_added }}"
+
+    - name: Add authorized key from current user
+      authorized_key:
+        user: ansible
+        state: present
+        key: "{{ lookup('file', lookup('env', 'HOME') + '/.ssh/id_rsa.pub') }}"
+      become: true
+      # https://docs.ansible.com/ansible/become.html#becoming-an-unprivileged-user
+      # become_user: ansible
+      #when: user_added is defined 
+

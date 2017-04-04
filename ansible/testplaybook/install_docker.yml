@@ -1,0 +1,44 @@
+- hosts: docker
+  remote_user: ansible
+
+  tasks:
+  - name: test
+    ping:
+  
+  - name: install stuff
+    become: yes
+    apt: name={{ item }} state=installed
+    with_items:
+      - apt-transport-https
+      - ca-certificates
+      - software-properties-common
+#      - curl
+    when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+  - name: add apt key for docker
+    become: yes
+    apt_key:
+      id: 0EBFCD88
+      url: "https://download.docker.com/linux/debian/gpg"
+      state: present
+    when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+  - name: add apt-repository
+    become: yes
+    apt_repository:
+      repo: deb [arch=amd64] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable
+      state: present
+    when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+  - name: install docker
+    become: yes
+    apt: name={{ item }} state=installed
+    with_items:
+      - docker-ce
+    when: ansible_distribution == 'Debian' or ansible_distribution == 'Ubuntu'
+
+  - name: add user to docker group
+    become: yes
+    user: name={{ item }} groups=docker append=yes
+    with_items:
+      - ansible

@@ -1,0 +1,9 @@
+[dockerhost]
+dockerhost # 192.168.33.21  # dockerhost
+
+[docker-gm]
+docker-gm  # 192.168.33.20  # docker-gm
+
+[docker:children]
+dockerhost
+docker-gm

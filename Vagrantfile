@@ -1,6 +1,8 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+ENABLE_DOCKER_GM = false
+
 Vagrant.configure("2") do |config|
   # The most common configuration options are documented and commented below.
   # For a complete reference, please see the online documentation at
@@ -9,11 +11,12 @@ Vagrant.configure("2") do |config|
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://atlas.hashicorp.com/search.
   config.vm.box = "debian/jessie64"
- 
+  config.ssh.insert_key = false 
+  config.vm.synced_folder ".", "/vagrant", type: "virtualbox"
+
   config.vm.define "ansible" do |ansible|
     ansible.vm.hostname = "ansible"
     ansible.vm.network "private_network", ip: "192.168.33.10"
-#    ansible.vm.network "forwarded_port", guest: 22, host: 10122, id: "ansible"
 
     ansible.vm.provider "virtualbox" do |vb|
       vb.memory = "256"
@@ -28,20 +31,28 @@ Vagrant.configure("2") do |config|
       wget --quiet --no-check-certificate https://bootstrap.pypa.io/get-pip.py -O - | python > /dev/null 2>&1
       echo "install ansible.. "
       pip install ansible > /dev/null 2>&1
+      echo "add insecure key.."
+      wget --quiet --no-check-certificate https://raw.githubusercontent.com/mitchellh/vagrant/master/keys/vagrant -O /home/vagrant/.ssh/id_rsa
+      wget --quiet --no-check-certificate https://raw.githubusercontent.com/mitchellh/vagrant/master/keys/vagrant.pub -O /home/vagrant/.ssh/id_rsa.pub
+      chown vagrant /home/vagrant/.ssh/id_rsa*
+      chgrp vagrant /home/vagrant/.ssh/id_rsa*
+      chmod 600 /home/vagrant/.ssh/id_rsa*
+      echo "update host file.."
+      echo "192.168.33.20  docker-gm" >> /etc/hosts
+      echo "192.168.33.21  dockerhost" >> /etc/hosts
     SHELL
   end
 
-  config.vm.define "docker" do |docker|
-    docker.vm.hostname = "docker-host"
+  if ENABLE_DOCKER_GM
+  config.vm.define "docker-gm" do |docker|
+    docker.vm.hostname = "docker-gm"
     docker.vm.network "private_network", ip: "192.168.33.20"
-#    docker.vm.network "forwarded_port", guest: 22, host: 10222, id: "docker"
     docker.vm.provision "shell", inline: <<-SHELL
       echo "Updating system.."
       apt-get update > /dev/null 2>&1 &&  apt-get upgrade -y > /dev/null 2>&1
       echo "setup repo.."
       apt-get install -y apt-transport-https ca-certificates software-properties-common curl > /dev/null 2>&1 
       curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add - > /dev/null 2>&1
-#      apt-key fingerprint 0EBFCD88
       add-apt-repository \
          "deb [arch=amd64] https://download.docker.com/linux/debian \
          $(lsb_release -cs) \
@@ -51,6 +62,12 @@ Vagrant.configure("2") do |config|
       echo "add vagrant to docker group"
       usermod -aG docker vagrant
     SHELL
+  end
+  end
+
+  config.vm.define "dockerhost" do |docker|
+    docker.vm.hostname = "dockerhost"
+    docker.vm.network "private_network", ip: "192.168.33.21"
   end
 
   # Share an additional folder to the guest VM. The first argument is
